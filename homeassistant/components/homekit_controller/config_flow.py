@@ -19,7 +19,7 @@ from aiohomekit.model.status_flags import StatusFlags
 from aiohomekit.utils import domain_supported, domain_to_name, serialize_broadcast_key
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
+from homeassistant.config_entries import SOURCE_ZEROCONF, ConfigFlow, ConfigFlowResult
 from homeassistant.core import callback
 from homeassistant.data_entry_flow import AbortFlow
 from homeassistant.helpers import device_registry as dr
@@ -413,6 +413,10 @@ class HomekitControllerFlowHandler(ConfigFlow, domain=DOMAIN):
         # async_start_pairing will make the device show its pin and return a
         # callable. We call the callable with the pin that the user has typed
         # in.
+
+        # Protect this flow from being dismissed by concurrent
+        # zeroconf discoveries while we are in the pairing step.
+        self.async_set_dismiss_protected(SOURCE_ZEROCONF)
 
         # Should never call this step without setting self.hkid
         assert self.hkid

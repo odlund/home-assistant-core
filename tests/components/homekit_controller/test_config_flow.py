@@ -699,6 +699,7 @@ async def test_pair_form_errors_on_start(
         "title_placeholders": {"name": "TestDevice", "category": "Outlet"},
         "unique_id": "00:00:00:00:00:00",
         "source": config_entries.SOURCE_ZEROCONF,
+        "dismiss_protected_sources": {config_entries.SOURCE_ZEROCONF},
     }
 
     # User gets back the form
@@ -747,6 +748,7 @@ async def test_pair_abort_errors_on_finish(
         "title_placeholders": {"name": "TestDevice", "category": "Outlet"},
         "unique_id": "00:00:00:00:00:00",
         "source": config_entries.SOURCE_ZEROCONF,
+        "dismiss_protected_sources": {config_entries.SOURCE_ZEROCONF},
     }
 
     # User enters pairing code
@@ -789,6 +791,7 @@ async def test_pair_form_errors_on_finish(
         "title_placeholders": {"name": "TestDevice", "category": "Outlet"},
         "unique_id": "00:00:00:00:00:00",
         "source": config_entries.SOURCE_ZEROCONF,
+        "dismiss_protected_sources": {config_entries.SOURCE_ZEROCONF},
     }
 
     # User enters pairing code
@@ -802,6 +805,7 @@ async def test_pair_form_errors_on_finish(
         "title_placeholders": {"name": "TestDevice", "category": "Outlet"},
         "unique_id": "00:00:00:00:00:00",
         "source": config_entries.SOURCE_ZEROCONF,
+        "dismiss_protected_sources": {config_entries.SOURCE_ZEROCONF},
     }
 
 
@@ -836,6 +840,7 @@ async def test_pair_unknown_errors(hass: HomeAssistant, controller) -> None:
         "title_placeholders": {"name": "TestDevice", "category": "Outlet"},
         "unique_id": "00:00:00:00:00:00",
         "source": config_entries.SOURCE_ZEROCONF,
+        "dismiss_protected_sources": {config_entries.SOURCE_ZEROCONF},
     }
 
     # User enters pairing code
@@ -852,6 +857,7 @@ async def test_pair_unknown_errors(hass: HomeAssistant, controller) -> None:
         "title_placeholders": {"name": "TestDevice", "category": "Outlet"},
         "unique_id": "00:00:00:00:00:00",
         "source": config_entries.SOURCE_ZEROCONF,
+        "dismiss_protected_sources": {config_entries.SOURCE_ZEROCONF},
     }
 
 
@@ -880,6 +886,7 @@ async def test_user_works(hass: HomeAssistant, controller) -> None:
         "source": config_entries.SOURCE_USER,
         "unique_id": "00:00:00:00:00:00",
         "title_placeholders": {"name": "TestDevice", "category": "Other"},
+        "dismiss_protected_sources": {config_entries.SOURCE_ZEROCONF},
     }
 
     result = await hass.config_entries.flow.async_configure(
@@ -917,6 +924,7 @@ async def test_user_pairing_with_insecure_setup_code(
         "source": config_entries.SOURCE_USER,
         "unique_id": "00:00:00:00:00:00",
         "title_placeholders": {"name": "TestDevice", "category": "Other"},
+        "dismiss_protected_sources": {config_entries.SOURCE_ZEROCONF},
     }
 
     result = await hass.config_entries.flow.async_configure(
@@ -1049,6 +1057,7 @@ async def test_mdns_update_to_paired_during_pairing(
         "title_placeholders": {"name": "TestDevice", "category": "Outlet"},
         "unique_id": "00:00:00:00:00:00",
         "source": config_entries.SOURCE_ZEROCONF,
+        "dismiss_protected_sources": {config_entries.SOURCE_ZEROCONF},
     }
 
     # User enters pairing code
