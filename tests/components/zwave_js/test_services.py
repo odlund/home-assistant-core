@@ -1973,6 +1973,205 @@ async def test_invoke_cc_api(
     client.async_send_command_no_wait.reset_mock()
 
 
+async def test_invoke_cc_api_response(
+    hass: HomeAssistant,
+    area_registry: ar.AreaRegistry,
+    device_registry: dr.DeviceRegistry,
+    client,
+    climate_danfoss_lc_13,
+    climate_radio_thermostat_ct100_plus_different_endpoints,
+    integration,
+) -> None:
+    """Test invoke_cc_api service returns response data."""
+    device_radio_thermostat = device_registry.async_get_device(
+        identifiers={
+            get_device_id(
+                client.driver, climate_radio_thermostat_ct100_plus_different_endpoints
+            )
+        }
+    )
+    assert device_radio_thermostat
+    device_danfoss = device_registry.async_get_device(
+        identifiers={get_device_id(client.driver, climate_danfoss_lc_13)}
+    )
+    assert device_danfoss
+
+    # Test response with a static endpoint. The asleep Danfoss node goes through
+    # async_send_command_no_wait which returns None regardless of the configured
+    # return value, because fire-and-forget calls don't wait for a response.
+    client.async_send_command.return_value = {"response": {"value": 42}}
+    client.async_send_command_no_wait.return_value = {"response": {"value": 99}}
+
+    result = await hass.services.async_call(
+        DOMAIN,
+        SERVICE_INVOKE_CC_API,
+        {
+            ATTR_DEVICE_ID: [
+                device_radio_thermostat.id,
+                device_danfoss.id,
+            ],
+            ATTR_COMMAND_CLASS: 67,
+            ATTR_ENDPOINT: 0,
+            ATTR_METHOD_NAME: "someMethod",
+            ATTR_PARAMETERS: [1, 2],
+        },
+        blocking=True,
+        return_response=True,
+    )
+
+    node_id_rt = climate_radio_thermostat_ct100_plus_different_endpoints.node_id
+    node_id_danfoss = climate_danfoss_lc_13.node_id
+
+    expected_result = {
+        str(node_id_rt): {"0": {"value": 42}},
+        str(node_id_danfoss): {"0": None},
+    }
+    assert result == expected_result
+
+    client.async_send_command.reset_mock()
+    client.async_send_command_no_wait.reset_mock()
+
+    # Test response without an endpoint (include area)
+    area = area_registry.async_get_or_create("test")
+    device_registry.async_update_device(device_danfoss.id, area_id=area.id)
+
+    client.async_send_command.return_value = {"response": {"value": 42}}
+    client.async_send_command_no_wait.return_value = {"response": {"value": 99}}
+
+    result = await hass.services.async_call(
+        DOMAIN,
+        SERVICE_INVOKE_CC_API,
+        {
+            ATTR_AREA_ID: area.id,
+            ATTR_DEVICE_ID: [device_radio_thermostat.id],
+            ATTR_COMMAND_CLASS: 67,
+            ATTR_METHOD_NAME: "someMethod",
+            ATTR_PARAMETERS: [1, 2],
+        },
+        blocking=True,
+        return_response=True,
+    )
+
+    assert result == expected_result
+
+    client.async_send_command.reset_mock()
+    client.async_send_command_no_wait.reset_mock()
+
+    # Test response with wait_for_result=True forces all nodes through
+    # async_send_command, so even the asleep Danfoss node returns a response
+    client.async_send_command.return_value = {"response": {"value": 42}}
+
+    result = await hass.services.async_call(
+        DOMAIN,
+        SERVICE_INVOKE_CC_API,
+        {
+            ATTR_DEVICE_ID: [
+                device_radio_thermostat.id,
+                device_danfoss.id,
+            ],
+            ATTR_COMMAND_CLASS: 67,
+            ATTR_ENDPOINT: 0,
+            ATTR_METHOD_NAME: "someMethod",
+            ATTR_PARAMETERS: [1, 2],
+            ATTR_WAIT_FOR_RESULT: True,
+        },
+        blocking=True,
+        return_response=True,
+    )
+
+    assert result == {
+        str(node_id_rt): {"0": {"value": 42}},
+        str(node_id_danfoss): {"0": {"value": 42}},
+    }
+    assert len(client.async_send_command.call_args_list) == 2
+    assert len(client.async_send_command_no_wait.call_args_list) == 0
+
+    client.async_send_command.reset_mock()
+    client.async_send_command_no_wait.reset_mock()
+
+    # Test response with wait_for_result=False forces all nodes through
+    # async_send_command_no_wait, so all responses are None
+    result = await hass.services.async_call(
+        DOMAIN,
+        SERVICE_INVOKE_CC_API,
+        {
+            ATTR_DEVICE_ID: [
+                device_radio_thermostat.id,
+                device_danfoss.id,
+            ],
+            ATTR_COMMAND_CLASS: 67,
+            ATTR_ENDPOINT: 0,
+            ATTR_METHOD_NAME: "someMethod",
+            ATTR_PARAMETERS: [1, 2],
+            ATTR_WAIT_FOR_RESULT: False,
+        },
+        blocking=True,
+        return_response=True,
+    )
+
+    assert result == {
+        str(node_id_rt): {"0": None},
+        str(node_id_danfoss): {"0": None},
+    }
+    assert len(client.async_send_command.call_args_list) == 0
+    assert len(client.async_send_command_no_wait.call_args_list) == 2
+
+    client.async_send_command.reset_mock()
+    client.async_send_command_no_wait.reset_mock()
+
+    # Test that calling without return_response returns None
+    client.async_send_command.return_value = {"response": {"value": 42}}
+    client.async_send_command_no_wait.return_value = {"response": {"value": 99}}
+
+    result = await hass.services.async_call(
+        DOMAIN,
+        SERVICE_INVOKE_CC_API,
+        {
+            ATTR_DEVICE_ID: [device_radio_thermostat.id],
+            ATTR_COMMAND_CLASS: 67,
+            ATTR_ENDPOINT: 0,
+            ATTR_METHOD_NAME: "someMethod",
+            ATTR_PARAMETERS: [1, 2],
+        },
+        blocking=True,
+        return_response=False,
+    )
+
+    assert result is None
+
+    client.async_send_command.reset_mock()
+    client.async_send_command_no_wait.reset_mock()
+
+    # Test response with entity targeting (no endpoint specified). The entity's
+    # primary value endpoint is used to determine the target endpoint.
+    client.async_send_command.return_value = {"response": {"value": 42}}
+    client.async_send_command_no_wait.return_value = {"response": {"value": 99}}
+
+    result = await hass.services.async_call(
+        DOMAIN,
+        SERVICE_INVOKE_CC_API,
+        {
+            ATTR_ENTITY_ID: [
+                CLIMATE_RADIO_THERMOSTAT_ENTITY,
+                "select.living_connect_z_thermostat_local_protection_state",
+            ],
+            ATTR_COMMAND_CLASS: 67,
+            ATTR_METHOD_NAME: "someMethod",
+            ATTR_PARAMETERS: [1, 2],
+        },
+        blocking=True,
+        return_response=True,
+    )
+
+    assert result == {
+        str(node_id_rt): {"1": {"value": 42}},
+        str(node_id_danfoss): {"0": None},
+    }
+
+    client.async_send_command.reset_mock()
+    client.async_send_command_no_wait.reset_mock()
+
+
 async def test_refresh_notifications(
     hass: HomeAssistant,
     area_registry: ar.AreaRegistry,

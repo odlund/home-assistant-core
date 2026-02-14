@@ -421,6 +421,10 @@
         "parameters": {
           "description": "A list of parameters to pass to the API method. Refer to the Z-Wave Command Class API documentation ({api_docs_url}) for parameters.",
           "name": "Parameters"
+        },
+        "wait_for_result": {
+          "description": "[%key:component::zwave_js::services::set_value::fields::wait_for_result::description%]",
+          "name": "[%key:component::zwave_js::services::set_value::fields::wait_for_result::name%]"
         }
       },
       "name": "Invoke a Command Class API on a node (advanced)"

@@ -425,6 +425,10 @@ invoke_cc_api:
       required: true
       selector:
         object:
+    wait_for_result:
+      required: false
+      selector:
+        boolean:
 
 refresh_notifications:
   fields:
